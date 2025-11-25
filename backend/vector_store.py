@@ -1,17 +1,17 @@
 """
-FAISS Vector Store for document retrieval
+Vector Store for document retrieval - Cloud-friendly version using scikit-learn
 """
 import os
 import json
 import pickle
 from typing import List, Dict, Any, Optional
 import numpy as np
-import faiss
+from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 
 
 class VectorStore:
-    """FAISS-based vector store for semantic search"""
+    """Scikit-learn based vector store for semantic search (cloud-compatible)"""
     
     def __init__(self, model_name: str = "all-MiniLM-L6-v2", index_path: str = "vector_db"):
         """
@@ -19,15 +19,15 @@ class VectorStore:
         
         Args:
             model_name: Sentence transformer model name
-            index_path: Directory to store FAISS index
+            index_path: Directory to store index
         """
         self.model_name = model_name
         self.index_path = index_path
         self.embedding_model = SentenceTransformer(model_name)
         self.dimension = self.embedding_model.get_sentence_embedding_dimension()
         
-        # Initialize FAISS index
-        self.index = None
+        # Initialize storage
+        self.embeddings = None  # numpy array of embeddings
         self.metadata_store = []  # Store metadata for each vector
         self.documents = []  # Store original document content
         
@@ -35,8 +35,8 @@ class VectorStore:
         os.makedirs(index_path, exist_ok=True)
     
     def _create_index(self):
-        """Create new FAISS index"""
-        self.index = faiss.IndexFlatL2(self.dimension)
+        """Create new index"""
+        self.embeddings = None
         self.metadata_store = []
         self.documents = []
     
@@ -47,9 +47,6 @@ class VectorStore:
         Args:
             documents: List of document dictionaries with 'content' and 'metadata'
         """
-        if self.index is None:
-            self._create_index()
-        
         if not documents:
             return
         
@@ -58,14 +55,17 @@ class VectorStore:
         
         # Generate embeddings
         print(f"Generating embeddings for {len(texts)} documents...")
-        embeddings = self.embedding_model.encode(
+        new_embeddings = self.embedding_model.encode(
             texts,
             show_progress_bar=True,
             convert_to_numpy=True
         )
         
-        # Add to FAISS index
-        self.index.add(embeddings.astype('float32'))
+        # Add to existing embeddings or create new
+        if self.embeddings is None:
+            self.embeddings = new_embeddings.astype('float32')
+        else:
+            self.embeddings = np.vstack([self.embeddings, new_embeddings.astype('float32')])
         
         # Store metadata and documents
         for doc in documents:
@@ -82,56 +82,66 @@ class VectorStore:
         score_threshold: Optional[float] = None
     ) -> List[Dict[str, Any]]:
         """
-        Search for similar documents
+        Search for similar documents using cosine similarity
         
         Args:
             query: Search query
             k: Number of results to return
-            score_threshold: Minimum similarity score (lower is better for L2)
+            score_threshold: Minimum similarity score (0-1, higher is better)
             
         Returns:
             List of documents with metadata and similarity scores
         """
-        if self.index is None or self.index.ntotal == 0:
+        if self.embeddings is None or len(self.embeddings) == 0:
             return []
         
         # Ensure k doesn't exceed available documents
-        k = min(k, self.index.ntotal)
+        k = min(k, len(self.documents))
         
         # Generate query embedding
         query_embedding = self.embedding_model.encode([query], convert_to_numpy=True)
         
-        # Search FAISS index
-        distances, indices = self.index.search(query_embedding.astype('float32'), k)
+        # Calculate cosine similarity
+        similarities = cosine_similarity(query_embedding, self.embeddings)[0]
+        
+        # Get top k indices (sorted by similarity, highest first)
+        top_k_indices = np.argsort(similarities)[::-1][:k]
         
         # Prepare results
         results = []
-        for i, (dist, idx) in enumerate(zip(distances[0], indices[0])):
+        for rank, idx in enumerate(top_k_indices):
+            similarity_score = float(similarities[idx])
+            
             # Skip if score threshold is set and not met
-            if score_threshold is not None and dist > score_threshold:
+            if score_threshold is not None and similarity_score < score_threshold:
                 continue
             
             result = {
                 'content': self.documents[idx],
                 'metadata': self.metadata_store[idx],
-                'similarity_score': float(dist),
-                'rank': i + 1
+                'similarity_score': similarity_score,
+                'rank': rank + 1
             }
             results.append(result)
         
         return results
     
+    @property
+    def ntotal(self):
+        """Get total number of documents (for compatibility with FAISS API)"""
+        return len(self.documents) if self.documents else 0
+    
     def save(self) -> None:
-        """Save FAISS index and metadata to disk"""
-        if self.index is None or self.index.ntotal == 0:
+        """Save index and metadata to disk"""
+        if self.embeddings is None or len(self.embeddings) == 0:
             print("No index to save")
             return
         
-        # Save FAISS index
-        index_file = os.path.join(self.index_path, "faiss_index.bin")
-        faiss.write_index(self.index, index_file)
+        # Save embeddings
+        embeddings_file = os.path.join(self.index_path, "embeddings.npy")
+        np.save(embeddings_file, self.embeddings)
         
-        # Save metadata and documents
+        # Save metadata and documents (maintaining compatibility with FAISS version)
         metadata_file = os.path.join(self.index_path, "metadata.pkl")
         with open(metadata_file, 'wb') as f:
             pickle.dump({
@@ -145,21 +155,28 @@ class VectorStore:
     
     def load(self) -> bool:
         """
-        Load FAISS index and metadata from disk
+        Load index and metadata from disk
         
         Returns:
             True if successful, False otherwise
         """
-        index_file = os.path.join(self.index_path, "faiss_index.bin")
+        embeddings_file = os.path.join(self.index_path, "embeddings.npy")
         metadata_file = os.path.join(self.index_path, "metadata.pkl")
         
-        if not os.path.exists(index_file) or not os.path.exists(metadata_file):
+        # Also check for old FAISS format files
+        old_faiss_file = os.path.join(self.index_path, "faiss_index.bin")
+        
+        if os.path.exists(old_faiss_file) and not os.path.exists(embeddings_file):
+            print("Warning: Old FAISS index detected. Please rebuild knowledge base.")
+            return False
+        
+        if not os.path.exists(embeddings_file) or not os.path.exists(metadata_file):
             print("No saved index found")
             return False
         
         try:
-            # Load FAISS index
-            self.index = faiss.read_index(index_file)
+            # Load embeddings
+            self.embeddings = np.load(embeddings_file)
             
             # Load metadata and documents
             with open(metadata_file, 'rb') as f:
@@ -172,7 +189,7 @@ class VectorStore:
                 if saved_model != self.model_name:
                     print(f"Warning: Loaded index uses model {saved_model}, but current model is {self.model_name}")
             
-            print(f"Loaded vector store with {self.index.ntotal} documents")
+            print(f"Loaded vector store with {len(self.documents)} documents")
             return True
             
         except Exception as e:
@@ -191,7 +208,7 @@ class VectorStore:
         Returns:
             Dictionary with statistics
         """
-        if self.index is None:
+        if self.embeddings is None:
             return {
                 'total_documents': 0,
                 'dimension': self.dimension,
@@ -206,10 +223,10 @@ class VectorStore:
             sources[source] = sources.get(source, 0) + 1
         
         return {
-            'total_documents': self.index.ntotal,
+            'total_documents': len(self.documents),
             'dimension': self.dimension,
             'model_name': self.model_name,
-            'is_empty': self.index.ntotal == 0,
+            'is_empty': len(self.documents) == 0,
             'sources': sources
         }
 
@@ -232,8 +249,8 @@ def test_vector_store():
             'metadata': {'source': 'ml_doc.txt', 'topic': 'AI'}
         },
         {
-            'content': 'FAISS is a library for efficient similarity search.',
-            'metadata': {'source': 'faiss_doc.txt', 'topic': 'search'}
+            'content': 'Scikit-learn is a library for efficient similarity search.',
+            'metadata': {'source': 'sklearn_doc.txt', 'topic': 'search'}
         }
     ]
     
