@@ -1,0 +1,479 @@
+{
+  "api_version": "1.0",
+  "base_url": "https://api.eshop.com/v1",
+  "endpoints": [
+    {
+      "path": "/api/cart/add",
+      "method": "POST",
+      "description": "Add item to shopping cart",
+      "authentication": "Optional",
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "product_id": {
+            "type": "string",
+            "required": true,
+            "description": "Unique product identifier",
+            "example": "product-1"
+          },
+          "quantity": {
+            "type": "integer",
+            "required": true,
+            "description": "Number of items to add",
+            "minimum": 1,
+            "example": 2
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "success": true,
+            "cart_total": 1398.0,
+            "item_count": 2,
+            "message": "Item added to cart successfully"
+          }
+        },
+        "error": {
+          "status_code": 400,
+          "body": {
+            "success": false,
+            "error": "Invalid product ID or quantity"
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/cart/remove",
+      "method": "DELETE",
+      "description": "Remove item from shopping cart",
+      "authentication": "Optional",
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "product_id": {
+            "type": "string",
+            "required": true,
+            "description": "Product identifier to remove",
+            "example": "product-3"
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "success": true,
+            "cart_total": 1199.0,
+            "item_count": 1,
+            "message": "Item removed from cart"
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/cart/update-quantity",
+      "method": "PATCH",
+      "description": "Update quantity of cart item",
+      "authentication": "Optional",
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "product_id": {
+            "type": "string",
+            "required": true,
+            "example": "product-2"
+          },
+          "quantity": {
+            "type": "integer",
+            "required": true,
+            "minimum": 0,
+            "description": "New quantity (0 to remove)",
+            "example": 3
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "success": true,
+            "cart_total": 3897.0,
+            "updated_quantity": 3
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/discount/apply",
+      "method": "POST",
+      "description": "Apply discount code to order",
+      "authentication": "Optional",
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "code": {
+            "type": "string",
+            "required": true,
+            "description": "Discount code to apply",
+            "example": "SAVE15"
+          },
+          "cart_total": {
+            "type": "number",
+            "required": true,
+            "description": "Current cart subtotal",
+            "example": 100.0
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "valid": true,
+            "discount_type": "percentage",
+            "discount_value": 15,
+            "discount_amount": 15.0,
+            "message": "Discount applied successfully"
+          }
+        },
+        "invalid_code": {
+          "status_code": 400,
+          "body": {
+            "valid": false,
+            "discount_amount": 0,
+            "error_message": "Invalid discount code"
+          }
+        },
+        "minimum_not_met": {
+          "status_code": 400,
+          "body": {
+            "valid": false,
+            "discount_amount": 0,
+            "error_message": "Minimum order amount of $100 required for this code",
+            "minimum_required": 100.0
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/discount/validate",
+      "method": "GET",
+      "description": "Validate discount code without applying",
+      "authentication": "Optional",
+      "request": {
+        "query_parameters": {
+          "code": {
+            "type": "string",
+            "required": true,
+            "example": "SAVE20"
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "valid": true,
+            "discount_type": "percentage",
+            "discount_value": 20,
+            "minimum_order": 100.0,
+            "description": "20% off on orders above $100"
+          }
+        },
+        "invalid": {
+          "status_code": 404,
+          "body": {
+            "valid": false,
+            "message": "Discount code not found"
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/order/calculate",
+      "method": "POST",
+      "description": "Calculate order total with all fees",
+      "authentication": "Optional",
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "cart_items": {
+            "type": "array",
+            "required": true,
+            "description": "Array of cart items",
+            "example": [
+              {
+                "product_id": "product-1",
+                "quantity": 1,
+                "price": 699.0
+              }
+            ]
+          },
+          "discount_code": {
+            "type": "string",
+            "required": false,
+            "example": "SAVE15"
+          },
+          "shipping_method": {
+            "type": "string",
+            "required": true,
+            "enum": ["standard", "express"],
+            "example": "standard"
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "subtotal": 699.0,
+            "discount": 104.85,
+            "tax": 59.42,
+            "shipping": 0.0,
+            "total": 653.57,
+            "breakdown": {
+              "subtotal_description": "Sum of all items",
+              "discount_description": "SAVE15 applied (15%)",
+              "tax_description": "10% of subtotal after discount",
+              "shipping_description": "Standard shipping (Free)"
+            }
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/order/submit",
+      "method": "POST",
+      "description": "Submit order for payment processing",
+      "authentication": "Required",
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "customer": {
+            "type": "object",
+            "required": true,
+            "properties": {
+              "name": {
+                "type": "string",
+                "required": true,
+                "example": "John Doe"
+              },
+              "email": {
+                "type": "string",
+                "required": true,
+                "format": "email",
+                "example": "john@example.com"
+              },
+              "address": {
+                "type": "string",
+                "required": false,
+                "example": "123 Main St, City, State 12345"
+              },
+              "phone": {
+                "type": "string",
+                "required": false,
+                "example": "+1234567890"
+              }
+            }
+          },
+          "cart_items": {
+            "type": "array",
+            "required": true,
+            "description": "Array of items in cart"
+          },
+          "shipping_method": {
+            "type": "string",
+            "required": true,
+            "enum": ["standard", "express"],
+            "example": "express"
+          },
+          "payment_method": {
+            "type": "string",
+            "required": true,
+            "enum": ["credit-card", "paypal", "cod"],
+            "example": "credit-card"
+          },
+          "discount_code": {
+            "type": "string",
+            "required": false,
+            "example": "FLAT50"
+          },
+          "terms_accepted": {
+            "type": "boolean",
+            "required": true,
+            "example": true
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 201,
+          "body": {
+            "success": true,
+            "order_id": "ORD-2024-00123",
+            "total_amount": 653.57,
+            "payment_status": "pending",
+            "estimated_delivery": "2024-12-05",
+            "message": "Order placed successfully"
+          }
+        },
+        "validation_error": {
+          "status_code": 400,
+          "body": {
+            "success": false,
+            "error": "Validation failed",
+            "details": [
+              "Customer email is required",
+              "Minimum order amount is $50"
+            ]
+          }
+        },
+        "payment_restriction": {
+          "status_code": 400,
+          "body": {
+            "success": false,
+            "error": "Cash on Delivery is only available for orders below $300"
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/shipping/calculate",
+      "method": "POST",
+      "description": "Calculate shipping cost",
+      "authentication": "Optional",
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "cart_total": {
+            "type": "number",
+            "required": true,
+            "example": 550.0
+          },
+          "shipping_method": {
+            "type": "string",
+            "required": true,
+            "enum": ["standard", "express"],
+            "example": "express"
+          }
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "shipping_cost": 0.0,
+            "reason": "Free express shipping for orders above $500",
+            "delivery_time": "2-3 business days"
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/products/list",
+      "method": "GET",
+      "description": "Get list of all available products",
+      "authentication": "Optional",
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "products": [
+              {
+                "product_id": "product-1",
+                "name": "Smartphone",
+                "description": "Latest model with advanced features",
+                "price": 699.0,
+                "in_stock": true,
+                "image_url": "https://example.com/images/smartphone.jpg"
+              },
+              {
+                "product_id": "product-2",
+                "name": "Laptop",
+                "description": "High-performance computing",
+                "price": 1299.0,
+                "in_stock": true,
+                "image_url": "https://example.com/images/laptop.jpg"
+              },
+              {
+                "product_id": "product-3",
+                "name": "Headphones",
+                "description": "Premium sound quality",
+                "price": 199.0,
+                "in_stock": true,
+                "image_url": "https://example.com/images/headphones.jpg"
+              },
+              {
+                "product_id": "product-4",
+                "name": "Smartwatch",
+                "description": "Track your fitness goals",
+                "price": 399.0,
+                "in_stock": true,
+                "image_url": "https://example.com/images/smartwatch.jpg"
+              },
+              {
+                "product_id": "product-5",
+                "name": "Tablet",
+                "description": "Entertainment on the go",
+                "price": 499.0,
+                "in_stock": true,
+                "image_url": "https://example.com/images/tablet.jpg"
+              }
+            ],
+            "total_count": 5
+          }
+        }
+      }
+    },
+    {
+      "path": "/api/products/{product_id}",
+      "method": "GET",
+      "description": "Get details of specific product",
+      "authentication": "Optional",
+      "path_parameters": {
+        "product_id": {
+          "type": "string",
+          "required": true,
+          "example": "product-1"
+        }
+      },
+      "response": {
+        "success": {
+          "status_code": 200,
+          "body": {
+            "product_id": "product-1",
+            "name": "Smartphone",
+            "description": "Latest model with advanced features",
+            "price": 699.0,
+            "in_stock": true,
+            "specifications": {
+              "brand": "TechBrand",
+              "model": "Pro X",
+              "year": 2024
+            }
+          }
+        },
+        "not_found": {
+          "status_code": 404,
+          "body": {
+            "error": "Product not found"
+          }
+        }
+      }
+    }
+  ],
+  "error_codes": {
+    "400": "Bad Request - Invalid input",
+    "401": "Unauthorized - Authentication required",
+    "404": "Not Found - Resource doesn't exist",
+    "422": "Unprocessable Entity - Validation failed",
+    "500": "Internal Server Error"
+  },
+  "common_headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "Authorization": "Bearer {token}"
+  }
+}

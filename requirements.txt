@@ -1,0 +1,33 @@
+# FastAPI and Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Streamlit Frontend
+streamlit==1.28.0
+
+# LLM and AI
+groq==0.4.2
+
+# Embeddings and Vector Store
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+
+# Document Processing
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# HTTP Requests
+requests==2.31.0
+httpx==0.25.0
+
+# Data Processing
+pydantic==2.5.0
+python-dotenv==1.0.0
+
+# Testing Framework
+selenium==4.15.0
+
+# Utilities
+numpy==1.24.3
+pandas==2.0.3
