@@ -9,9 +9,12 @@ streamlit==1.28.0
 # LLM and AI
 groq==0.4.2
 
-# Embeddings and Vector Store - FIXED: Removed faiss-cpu, added scikit-learn
-sentence-transformers==2.2.2
-scikit-learn==1.3.0
+# Embeddings and Vector Store - Updated for compatibility
+sentence-transformers>=2.2.2
+transformers>=4.35.0
+huggingface-hub>=0.19.0
+faiss-cpu==1.7.4
+torch>=2.0.0
 
 # Document Processing
 beautifulsoup4==4.12.2
@@ -25,12 +28,9 @@ httpx==0.25.0
 pydantic==2.5.0
 python-dotenv==1.0.0
 
-# Testing Framework (optional - remove if not deploying tests)
-# selenium==4.15.0
+# Testing Framework
+selenium==4.15.0
 
 # Utilities
-numpy==1.24.3
-# pandas==2.0.3  # Commented out - only include if you actually use it
-
-# Production server (for some platforms)
-gunicorn==21.2.0
+numpy>=1.24.3
+pandas>=2.0.3
