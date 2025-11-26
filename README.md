@@ -378,92 +378,7 @@ curl http://localhost:8000/knowledge-base-status
 5. Generate test cases
 6. Generate script
 
-## 🎥 Demo Video Script
 
-To create a demo video, follow this flow:
-
-1. **Introduction** (30 sec)
-   - Show project overview
-   - Mention technologies used
-
-2. **Setup** (1 min)
-   - Show project structure
-   - Demonstrate starting backend and frontend
-
-3. **Knowledge Base** (2 min)
-   - Upload documents in Streamlit
-   - Build knowledge base
-   - Show success message
-
-4. **Test Case Generation** (3 min)
-   - Enter query for discount code tests
-   - Show generated test cases
-   - Highlight "grounded_in" references
-   - Try form validation query
-
-5. **Script Generation** (2 min)
-   - Select a test case
-   - Generate Selenium script
-   - Download script
-   - Show browser automation
-
-6. **Conclusion** (1 min)
-   - Summarize features
-   - Show code quality
-
-## 📝 Key Features Explained
-
-### 1. Strict Document Grounding
-
-Every test case includes a "grounded_in" field that references the exact source document and quote. This ensures:
-- No hallucinated features
-- Traceable test cases
-- Reliable test coverage
-
-### 2. RAG Pipeline
-
-The system uses retrieval-augmented generation:
-1. User query → Vector search
-2. Retrieve top-k relevant documents
-3. Build context with source citations
-4. LLM generates grounded test cases
-
-### 3. Selenium Script Generation
-
-Generated scripts include:
-- Proper WebDriverWait usage
-- Element selectors from HTML
-- Error handling
-- Assertions for validation
-- Clean, runnable code
-
-## 🔒 Security Notes
-
-- Never commit `.env` file
-- Keep Groq API key secret
-- Don't expose API endpoints publicly without authentication
-- Review generated scripts before running
-
-## 🤝 Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🆘 Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Check troubleshooting section
-- Review API documentation
-
-## 🎓 Learning Resources
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Streamlit Documentation](https://docs.streamlit.io/)
@@ -474,3 +389,4 @@ For issues and questions:
 ---
 
 **Built with ❤️ using FastAPI, Streamlit, Groq, and FAISS**
+
